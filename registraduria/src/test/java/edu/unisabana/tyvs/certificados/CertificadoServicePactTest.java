@@ -116,4 +116,42 @@ class CertificadoServicePactTest {
         // Assert
         assertNull(certificado);
     }
+        /**
+     * Interaccion 3: un votante menor de edad no recibe certificado.
+     *
+     * A diferencia de las dos interacciones anteriores, este "given" no
+     * depende de datos previamente guardados: la edad viene en el propio
+     * cuerpo de la peticion. El proveedor no necesita montar nada en la BD,
+     * pero igual declara el @State para que Pact sepa que la interaccion
+     * existe y quede documentada.
+     */
+    @Pact(consumer = "certificados", provider = "registraduria")
+    public RequestResponsePact votanteMenorDeEdad(PactDslWithProvider builder) {
+        return builder
+                .given("un votante menor de edad con id 902")
+                .uponReceiving("un registro de votante menor de edad")
+                .path("/register")
+                .method("POST")
+                .headers(JSON)
+                .body("{\"name\":\"Sofia\",\"id\":902,\"age\":10,\"gender\":\"FEMALE\",\"alive\":true}")
+                .willRespondWith()
+                .status(200)
+                .body("UNDERAGE")
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(pactMethod = "votanteMenorDeEdad")
+    @DisplayName("No emite certificado cuando la Registraduria responde UNDERAGE")
+    void noEmiteCertificadoCuandoElVotanteEsMenorDeEdad(MockServer mockServer) {
+        // Arrange
+        CertificadoService servicio =
+                new CertificadoService(new RegistraduriaClient(mockServer.getUrl()));
+
+        // Act
+        String certificado = servicio.emitirCertificado(902, "Sofia", 10, "FEMALE", true);
+
+        // Assert
+        assertNull(certificado);
+    }
 }

@@ -78,4 +78,16 @@ class RegistraduriaProviderPactIT {
     void conVotante901() {
         registry.registerVoter(new Person("Luis", 901, 40, Gender.MALE, true));
     }
+        /**
+     * Estado para la interaccion "un registro de votante menor de edad".
+     *
+     * No hay nada que montar en la BD: UNDERAGE lo decide la regla de
+     * negocio de Registry a partir de la edad que viene en la peticion, no
+     * de un dato previamente guardado. El metodo existe igual porque Pact
+     * exige un @State que coincida con cada "given" del pacto.
+     */
+    @State("un votante menor de edad con id 902")
+    void votanteMenorDeEdad902() throws Exception {
+        repo.deleteAll();
+    }
 }
