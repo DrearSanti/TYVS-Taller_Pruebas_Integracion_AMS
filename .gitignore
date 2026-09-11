@@ -16,3 +16,4 @@ registraduria/target/
 .vscode/
 *.iml
 target/
+registraduria/*.log
