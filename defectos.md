@@ -4,9 +4,6 @@ Defectos detectados durante las pruebas unitarias, de integración y de sistema
 del proyecto **Registraduría**. Cada uno se documenta de forma estructurada para
 facilitar su análisis, trazabilidad y corrección.
 
-Este documento recopila los **defectos detectados durante las pruebas unitarias, de integración y de sistema** del proyecto **Registraduría**.
-Cada defecto se documenta de manera estructurada para facilitar su análisis, trazabilidad y corrección.
-
 Los defectos del 1 al 5 son los del ejemplo de referencia. 06 y 07 son los que detectamos nosotros
 
 ---
