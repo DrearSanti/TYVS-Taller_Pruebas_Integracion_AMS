@@ -1,10 +1,13 @@
-# Registro de Defectos — EJEMPLO RESUELTO
+# Registro de Defectos
 
-> **Este archivo es un ejemplo del profesor**, no su entrega. Muestra el ciclo de vida completo de un defecto: detectado, analizado y cerrado con la prueba que lo verifica.
-> Para su taller parta de [`defectos_template.md`](defectos_template.md) y documente los defectos que **usted** encuentre.
+Defectos detectados durante las pruebas unitarias, de integración y de sistema
+del proyecto **Registraduría**. Cada uno se documenta de forma estructurada para
+facilitar su análisis, trazabilidad y corrección.
 
 Este documento recopila los **defectos detectados durante las pruebas unitarias, de integración y de sistema** del proyecto **Registraduría**.
 Cada defecto se documenta de manera estructurada para facilitar su análisis, trazabilidad y corrección.
+
+Los defectos del 1 al 5 son los del ejemplo de referencia. 06 y 07 son los que detectamos nosotros
 
 ---
 
@@ -106,6 +109,63 @@ when(repo.existsById(7)).thenReturn(true);
 
 ---
 
+### Defecto 06 — Dos librerías aportan `org.json.JSONObject` al classpath *(Prueba de sistema)*
+
+- **Capa afectada:** Configuración del proyecto (`pom.xml`)
+- **Caso de prueba:** Cualquier arranque del contexto de Spring Boot durante `mvn verify`, por ejemplo `RegistryControllerIT` o `RegistraduriaProviderPactIT`.
+- **Entrada:** Ejecución de `mvn clean verify` sobre el proyecto completo.
+- **Resultado esperado:** Un único `org.json.JSONObject` en el classpath, de modo que el parseo de JSON sea determinista.
+- **Resultado obtenido:** Dos implementaciones distintas de la misma clase. Spring Boot lo advierte al construir el contexto:
+
+```
+Found multiple occurrences of org.json.JSONObject on the class path:
+
+  jar:file:/.../com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar!/org/json/JSONObject.class
+  jar:file:/.../org/json/json/20240205/json-20240205.jar!/org/json/JSONObject.class
+
+You may wish to exclude one of them to ensure predictable runtime behavior
+```
+
+- **Causa probable:** `spring-boot-starter-test` arrastra `android-json` mientras que las dependencias de Pact traen `org.json:json`. Cuál de las dos gana depende del orden de carga del classpath, que no está garantizado entre entornos.
+- **Tipo de prueba:** Sistema (detectado por la construcción del contexto de Spring durante las pruebas)
+- **Estado:** **Abierto** — se documenta antes de corregir. La solución sería excluir una de las dos en el `pom.xml`.
+- **Prioridad:** Media
+
+> **Por qué no es solo una advertencia.** Las dos implementaciones de `JSONObject` no son idénticas: `android-json` es una versión reducida pensada para Android y `org.json:json` es la de referencia. Si el orden del classpath cambia entre la máquina de un integrante, la de otro y el servidor de CI, el mismo JSON podría procesarse de forma distinta sin que nada falle de manera visible. Es la clase de defecto que produce un "en mi máquina funciona" y que solo aparece en producción.
+
+---
+
+### Defecto 07 — Divergencia de dialecto SQL entre H2 y PostgreSQL *(Prueba de integración)*
+
+- **Capa afectada:** Infraestructura (`RegistryRepository`) y estrategia de pruebas
+- **Caso de prueba:** La misma consulta ejecutada contra los dos motores, sobre el esquema que crea `RegistryRepository.initSchema()`.
+- **Entrada:**
+
+```sql
+SELECT "name" FROM registry WHERE id = 400
+```
+
+- **Resultado esperado:** Si H2 sustituyera a PostgreSQL en pruebas, la misma consulta debería funcionar en ambos motores.
+- **Resultado obtenido:** Funciona en PostgreSQL y falla en H2:
+
+```
+H2 rechazo la consulta: Columna "name" no encontrada
+Column "name" not found; SQL statement:
+SELECT "name" FROM registry WHERE id = 400 [42122-224]
+```
+
+- **Causa probable:** PostgreSQL pliega los identificadores sin comillas a minúsculas, de modo que la columna queda como `name` y `"name"` la resuelve. H2 los pliega a mayúsculas, así que la columna queda como `NAME` y `"name"` no existe. El entrecomillado vuelve el identificador sensible a la caja y expone la divergencia.
+- **Tipo de prueba:** Integración. Verificado con código en ambos motores: `RegistryRepositoryH2DialectIT.shouldFailOnQuotedLowercaseIdentifierInH2()` y `RegistryRepositoryPostgresIT.shouldResolveQuotedLowercaseIdentifier()` (esta última requiere Docker).
+- **Estado:** **Resuelto** — el código de producción no usa identificadores entrecomillados, de modo que no hay defecto activo. Las dos pruebas quedan como constancia del riesgo para que nadie los introduzca más adelante.
+- **Prioridad:** Media
+
+> **Por qué este defecto es el argumento del taller.** Sustituir PostgreSQL por H2 en las pruebas es cómodo: arranca en milisegundos y no necesita Docker. Pero es una aproximación, no una equivalencia. Una prueba de integración que pase contra H2 no garantiza que el código funcione contra el motor de producción, y aquí está demostrado con dos pruebas que ejecutan la misma sentencia y obtienen resultados opuestos, en vez de afirmarlo en un comentario.
+>
+> Es también la razón concreta por la que vale la pena tener Docker disponible: las 5 pruebas de `RegistryRepositoryPostgresIT` se omiten sin él, y son justamente las que ejercitan el motor real.
+
+---
+
+
 ## Formato 2: Tabla de defectos (bug tracking)
 
 | ID | Caso de Prueba | Capa | Resultado Esperado | Resultado Obtenido | Tipo | Estado | Prioridad |
@@ -115,6 +175,9 @@ when(repo.existsById(7)).thenReturn(true);
 | 03 | Duplicado por ID | Infraestructura | `DUPLICATED` | `VALID` | Integración | Resuelto | Alta |
 | 04 | Fallo de persistencia | Aplicación | `RegistryPersistenceException` | `NullPointerException` | Unitaria (mock) | Resuelto | Media |
 | 05 | Error HTTP 500 | Delivery | `HTTP 400` | `HTTP 500` | Sistema (REST) | Resuelto | Alta |
+| 06 | `JSONObject` duplicado en classpath | Configuración (`pom.xml`) | Una sola implementación | Dos JAR aportan la misma clase | Sistema | Abierto | Media |
+| 07 | Identificador entrecomillado en minúsculas | Infraestructura | Misma consulta válida en H2 y PostgreSQL | Válida en PostgreSQL, `Column "name" not found` en H2 | Integración | Resuelto | Media |
+
 
 ---
 
