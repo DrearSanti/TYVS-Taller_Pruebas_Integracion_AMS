@@ -178,4 +178,43 @@ public class RegistryIT {
         assertEquals(RegisterResult.VALID, result);
         assertTrue(repo.existsById(104));
     }
+
+    /**
+     * Caso de prueba:
+     * <p>Un identificador no positivo se rechaza como dato invalido.</p>
+     *
+     * <p>Es la segunda guarda de entrada del caso de uso, evaluada antes de
+     * cualquier consulta a la base de datos. Todos los demas campos se dejan
+     * validos para que el rechazo no pueda atribuirse a otra regla.</p>
+     */
+    @Test
+    public void shouldReturnInvalidWhenIdIsNotPositive() throws Exception {
+        // Arrange
+        Person idInvalido = new Person("Laura", 0, 30, Gender.FEMALE, true);
+
+        // Act
+        RegisterResult result = registry.registerVoter(idInvalido);
+
+        // Assert
+        assertEquals(RegisterResult.INVALID, result);
+        assertFalse(repo.existsById(0));
+    }
+
+    /**
+     * Caso de prueba:
+     * <p>Una persona nula se rechaza con un valor de negocio, no con una
+     * excepcion.</p>
+     *
+     * <p>Es la unica prueba de esta clase sin seccion Arrange ni asercion de
+     * persistencia: no hay objeto que preparar ni identificador contra el cual
+     * consultar. Lo que verifica es que la primera guarda responde
+     * {@code INVALID} en vez de propagar una NullPointerException hasta la capa
+     * de entrega.</p>
+     */
+    @Test
+    public void shouldReturnInvalidWhenPersonIsNull() {
+        // Act y Assert
+        assertEquals(RegisterResult.INVALID, registry.registerVoter(null));
+    }
+
 }
