@@ -1,0 +1,39 @@
+Taller de Pruebas de Integración y Sistema
+Curso: Testing y Validación de Software
+Universidad de La Sabana
+
+Repositorio: https://github.com/DrearSanti/TYVS-Taller_Pruebas_Integracion_AMS
+Fork de: https://github.com/CesarAVegaF312/TYVS-Taller_Pruebas_Integracion
+
+INTEGRANTES
+
+Santiago Escobar
+Correo: santiagoesga@unisabana.edu.co
+GitHub: DrearSanti
+Aporte: pruebas de integración con H2 (RegistryIT), matriz de pruebas,
+        páginas del Wiki sobre tipos de pruebas y arquitectura limpia.
+
+Antonio Benítez
+Correo: antonioberu@unisabana.edu.co
+GitHub: antobeni07
+Aporte: pruebas con Mockito (RegistryWithMockTest), pruebas de sistema HTTP
+        (RegistryControllerIT), gestión de defectos.
+
+Mateo Ramírez
+Correo: mateoraca@unisabana.edu.co
+GitHub: technologybyteo
+Aporte: pruebas con Testcontainers sobre PostgreSQL, contract testing con Pact
+        (consumidor y proveedor), divergencia de dialecto H2/PostgreSQL.
+
+EJECUCIÓN
+
+    cd registraduria
+    mvn clean verify
+
+Requiere Docker en ejecución para las pruebas de Testcontainers. Sin Docker,
+esas pruebas se omiten en vez de fallar y el resto de la suite sigue en verde.
+
+DOCUMENTACIÓN
+
+La documentación completa del taller está en el Wiki del repositorio:
+https://github.com/DrearSanti/TYVS-Taller_Pruebas_Integracion_AMS/wiki
